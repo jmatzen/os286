@@ -1,5 +1,14 @@
 ._*
 *.img
 *.bin
+*.o
+*.obj
+*.err
+*.lst
+*.map
+*.sym
+*.exe
+*.com
+*.lib
 .tools
 .cache
