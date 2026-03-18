@@ -1,20 +1,10 @@
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned long u32;
-
-#ifndef __WATCOMC__
-#define __cdecl
-#endif
+#include "kernel.h"
 
 #define CMD_BUF_LEN 64
 #define DEFAULT_DUMP_LEN 128U
 #define MAX_DUMP_LEN 256U
 
-extern void __cdecl serial_putchar(int ch);
 extern u8 __cdecl serial_getchar(void);
-extern u8 __cdecl pm_read_phys(u16 addr_lo, u16 addr_hi);
-extern void __cdecl pm_write_phys(u16 addr_lo, u16 addr_hi, int value);
-extern void __cdecl stage2_halt(void);
 
 struct command {
     const char *name;
@@ -24,12 +14,6 @@ struct command {
 static char cmd_buf[CMD_BUF_LEN + 1];
 static const char *parsed_next;
 static u32 parsed_value;
-
-static const char msg_banner[] =
-    "\r\n"
-    "286 PM Shell  --  C stage2 via Open Watcom\r\n"
-    "Type 'help' for commands.\r\n"
-    "\r\n";
 
 static const char msg_prompt[] = "> ";
 static const char msg_unknown[] = "unknown command (try 'help')\r\n";
@@ -61,25 +45,12 @@ static const struct command commands[] = {
     { 0, 0 }
 };
 
-static void putch(char ch)
-{
-    serial_putchar((unsigned char)ch);
-}
-
-static void puts_raw(const char *text)
-{
-    while (*text != 0) {
-        putch(*text);
-        ++text;
-    }
-}
-
 static void print_hex_digit(u8 value)
 {
     if (value < 10) {
-        putch((char)('0' + value));
+        kputch((char)('0' + value));
     } else {
-        putch((char)('a' + (value - 10)));
+        kputch((char)('a' + (value - 10)));
     }
 }
 
@@ -176,17 +147,17 @@ static unsigned read_line(void)
 
         if (ch == '\r') {
             cmd_buf[length] = 0;
-            putch('\r');
-            putch('\n');
+            kputch('\r');
+            kputch('\n');
             return length;
         }
 
         if (ch == '\b' || ch == 0x7f) {
             if (length != 0) {
                 --length;
-                putch('\b');
-                putch(' ');
-                putch('\b');
+                kputch('\b');
+                kputch(' ');
+                kputch('\b');
             }
             continue;
         }
@@ -201,18 +172,8 @@ static unsigned read_line(void)
 
         cmd_buf[length] = (char)ch;
         ++length;
-        putch((char)ch);
+        kputch((char)ch);
     }
-}
-
-static u8 read_phys_byte(u32 address)
-{
-    return pm_read_phys((u16)address, (u16)(address >> 16));
-}
-
-static void write_phys_byte(u32 address, u8 value)
-{
-    pm_write_phys((u16)address, (u16)(address >> 16), value);
 }
 
 static void dispatch_command(const char *input)
@@ -234,13 +195,13 @@ static void dispatch_command(const char *input)
         }
     }
 
-    puts_raw(msg_unknown);
+    kputs(msg_unknown);
 }
 
 static void __cdecl cmd_help(const char *args)
 {
     (void)args;
-    puts_raw(msg_help);
+    kputs(msg_help);
 }
 
 static void __cdecl cmd_peek(const char *args)
@@ -250,19 +211,19 @@ static void __cdecl cmd_peek(const char *args)
 
     args = skip_spaces(args);
     if (!parse_hex_value(args, 6)) {
-        puts_raw(msg_usage_peek);
+        kputs(msg_usage_peek);
         return;
     }
     address = parsed_value;
 
-    value = read_phys_byte(address);
+    value = kread_phys_byte(address);
 
-    putch('[');
+    kputch('[');
     print_hex24(address);
-    puts_raw("] = ");
+    kputs("] = ");
     print_hex_byte(value);
-    putch('\r');
-    putch('\n');
+    kputch('\r');
+    kputch('\n');
 }
 
 static void __cdecl cmd_poke(const char *args)
@@ -272,20 +233,20 @@ static void __cdecl cmd_poke(const char *args)
 
     args = skip_spaces(args);
     if (!parse_hex_value(args, 6)) {
-        puts_raw(msg_usage_poke);
+        kputs(msg_usage_poke);
         return;
     }
     address = parsed_value;
     args = skip_spaces(parsed_next);
 
     if (!parse_hex_value(args, 2)) {
-        puts_raw(msg_usage_poke);
+        kputs(msg_usage_poke);
         return;
     }
     value = parsed_value;
 
-    write_phys_byte(address, (u8)value);
-    puts_raw(msg_ok);
+    kwrite_phys_byte(address, (u8)value);
+    kputs(msg_ok);
 }
 
 static void __cdecl cmd_dump(const char *args)
@@ -296,7 +257,7 @@ static void __cdecl cmd_dump(const char *args)
 
     args = skip_spaces(args);
     if (!parse_hex_value(args, 6)) {
-        puts_raw(msg_usage_dump);
+        kputs(msg_usage_dump);
         return;
     }
     address = parsed_value;
@@ -304,7 +265,7 @@ static void __cdecl cmd_dump(const char *args)
 
     if (*args != 0) {
         if (!parse_hex_value(args, 4)) {
-            puts_raw(msg_usage_dump);
+            kputs(msg_usage_dump);
             return;
         }
         count = parsed_value;
@@ -319,37 +280,37 @@ static void __cdecl cmd_dump(const char *args)
         unsigned column;
 
         print_hex24(row_address);
-        puts_raw(": ");
+        kputs(": ");
 
         for (column = 0; column < row_count; ++column) {
-            u8 value = read_phys_byte((row_address + column) & 0x00ffffffUL);
+            u8 value = kread_phys_byte((row_address + column) & 0x00ffffffUL);
             if (column == 8U) {
-                putch(' ');
+                kputch(' ');
             }
             print_hex_byte(value);
-            putch(' ');
+            kputch(' ');
         }
 
         for (; column < 16U; ++column) {
             if (column == 8U) {
-                putch(' ');
+                kputch(' ');
             }
-            puts_raw("   ");
+            kputs("   ");
         }
 
-        puts_raw(" |");
+        kputs(" |");
 
         for (column = 0; column < row_count; ++column) {
-            u8 value = read_phys_byte((row_address + column) & 0x00ffffffUL);
+            u8 value = kread_phys_byte((row_address + column) & 0x00ffffffUL);
             if (value < 0x20 || value > 0x7e) {
                 value = '.';
             }
-            putch((char)value);
+            kputch((char)value);
         }
 
-        putch('|');
-        putch('\r');
-        putch('\n');
+        kputch('|');
+        kputch('\r');
+        kputch('\n');
 
         row_offset += row_count;
         count -= row_count;
@@ -359,16 +320,14 @@ static void __cdecl cmd_dump(const char *args)
 static void __cdecl cmd_halt(const char *args)
 {
     (void)args;
-    puts_raw(msg_halting);
-    stage2_halt();
+    kputs(msg_halting);
+    khalt();
 }
 
-void __cdecl kmain(void)
+void __cdecl console_run(void)
 {
-    puts_raw(msg_banner);
-
     for (;;) {
-        puts_raw(msg_prompt);
+        kputs(msg_prompt);
         if (read_line() == 0U) {
             continue;
         }

@@ -140,11 +140,11 @@ For the native Open Watcom v2 macOS build notes used in this repository, see
 ## C-backed stage 2 shell
 
 The OS image keeps the boot sector and protected-mode transition in assembly,
-but the interactive stage 2 shell is now implemented in C and linked into a
-flat raw binary with Open Watcom.
+but the stage 2 kernel body is implemented in C and linked into a flat raw
+binary with Open Watcom.
 
 - assembly remains responsible for the boot path, IDT setup, and protected-mode ABI handoff
-- C owns the shell REPL, command parsing, and the `help` / `peek` / `poke` / `dump` / `halt` commands
+- C owns the first kernel layer and the serial console REPL, including the `help` / `peek` / `poke` / `dump` / `halt` commands
 
 The `make` default target builds that stage 2 shell with:
 

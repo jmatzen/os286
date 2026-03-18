@@ -1,21 +1,62 @@
-Module: Z:\Users\john\depot\os286\abi\abi_proof.c
+Module: /Users/john/depot/os286/abi/abi_proof.c
 GROUP: 'DGROUP' CONST,CONST2,_DATA
 
 Segment: _TEXT BYTE USE16 0000009E bytes
 
 #include <stddef.h>
-#include <stddef.h>
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned long u32;
+
+#ifndef __WATCOMC__
+#define __cdecl
+#endif
+
+#define ABI_ASSERT(name, expr) typedef char abi_assert_##name[(expr) ? 1 : -1]
+
+struct pair16 {
+    u16 lo;
+    u16 hi;
+};
+
+struct mixed_layout {
+    u8 tag;
+    u16 value;
+    u8 tail;
+};
+
+#ifdef __WATCOMC__
+ABI_ASSERT(char_is_8_bits, sizeof(char) == 1);
+ABI_ASSERT(short_is_16_bits, sizeof(short) == 2);
+ABI_ASSERT(int_is_16_bits, sizeof(int) == 2);
+ABI_ASSERT(long_is_32_bits, sizeof(long) == 4);
+ABI_ASSERT(ptr_is_16_bits, sizeof(void *) == 2);
+ABI_ASSERT(fn_ptr_is_16_bits, sizeof(int (__cdecl *)(void)) == 2);
+ABI_ASSERT(pair16_size_is_4, sizeof(struct pair16) == 4);
+ABI_ASSERT(pair16_hi_offset_is_2, offsetof(struct pair16, hi) == 2);
+ABI_ASSERT(mixed_value_offset_is_2, offsetof(struct mixed_layout, value) == 2);
+ABI_ASSERT(mixed_tail_offset_is_4, offsetof(struct mixed_layout, tail) == 4);
+ABI_ASSERT(mixed_size_is_6, sizeof(struct mixed_layout) == 6);
+#endif
+
+u16 __cdecl abi_sum3(u16 first, u16 second, u16 third)
 0000				_abi_sum3:
 0000  55				push		bp
 0001  89 E5				mov		bp,sp
 
+{
+    return first + second + third;
 0003  8B 46 04				mov		ax,0x4[bp]
 0006  03 46 06				add		ax,0x6[bp]
 0009  03 46 08				add		ax,0x8[bp]
 
+}
 000C  5D				pop		bp
 000D  C3				ret
 
+
+u32 __cdecl abi_muladd32(u16 scale, u32 base)
 
 Routine Size: 14 bytes,    Routine Base: _TEXT + 0000
 
@@ -23,6 +64,8 @@ Routine Size: 14 bytes,    Routine Base: _TEXT + 0000
 000E  55				push		bp
 000F  89 E5				mov		bp,sp
 
+{
+    return base + ((u32)scale << 4);
 0011  8B 46 04				mov		ax,0x4[bp]
 0014  31 D2				xor		dx,dx
 0016  B9 04 00				mov		cx,0x0004
@@ -33,9 +76,12 @@ Routine Size: 14 bytes,    Routine Base: _TEXT + 0000
 001F  03 46 06				add		ax,0x6[bp]
 0022  13 56 08				adc		dx,0x8[bp]
 
+}
 0025  5D				pop		bp
 0026  C3				ret
 
+
+struct pair16 __cdecl abi_pair_add(struct pair16 left, struct pair16 right)
 
 Routine Size: 25 bytes,    Routine Base: _TEXT + 000E
 
@@ -43,18 +89,27 @@ Routine Size: 25 bytes,    Routine Base: _TEXT + 000E
 0027  55				push		bp
 0028  89 E5				mov		bp,sp
 
+{
+    struct pair16 out;
+
+    out.lo = left.lo + right.lo;
 002A  8B 56 04				mov		dx,0x4[bp]
 002D  03 56 08				add		dx,0x8[bp]
 
+    out.hi = left.hi + right.hi;
 0030  8B 5E 06				mov		bx,0x6[bp]
 0033  03 5E 0A				add		bx,0xa[bp]
 
+    return out;
+}
 0036  B8 00 00				mov		ax,offset DGROUP:L$2
 0039  89 16 00 00			mov		DGROUP:L$2,dx
 003D  89 1E 02 00			mov		DGROUP:L$3,bx
 0041  5D				pop		bp
 0042  C3				ret
 
+
+int __cdecl abi_caller(void)
 
 Routine Size: 28 bytes,    Routine Base: _TEXT + 0027
 
@@ -65,6 +120,17 @@ Routine Size: 28 bytes,    Routine Base: _TEXT + 0027
 0047  57				push		di
 0048  83 EC 02				sub		sp,0x0002
 
+{
+    struct pair16 left;
+    struct pair16 right;
+    struct pair16 out;
+
+    left.lo = 1;
+    left.hi = 2;
+    right.lo = 3;
+    right.hi = 4;
+
+    out = abi_pair_add(left, right);
 004B  B8 04 00				mov		ax,0x0004
 004E  50				push		ax
 004F  B8 03 00				mov		ax,0x0003
@@ -80,6 +146,8 @@ Routine Size: 28 bytes,    Routine Base: _TEXT + 0027
 0065  89 46 FA				mov		-0x6[bp],ax
 0068  83 C4 08				add		sp,0x0008
 
+
+    return abi_sum3(5, 6, 7)
 006B  31 C0				xor		ax,ax
 006D  50				push		ax
 006E  B8 34 12				mov		ax,0x1234
@@ -101,6 +169,10 @@ Routine Size: 28 bytes,    Routine Base: _TEXT + 0027
 0092  01 F8				add		ax,di
 0094  03 46 FA				add		ax,-0x6[bp]
 
+        + (int)abi_muladd32(8, 0x1234UL)
+        + out.lo
+        + out.hi;
+}
 0097  8D 66 FC				lea		sp,-0x4[bp]
 009A  5F				pop		di
 009B  5E				pop		si

@@ -16,7 +16,7 @@ STAGE2_SECTORS := 16
 
 STAGE1   := boot.bin
 STAGE2   := shell.bin
-STAGE2_C_OBJ   := stage2_shell.o
+STAGE2_C_OBJS  := kernel.o console.o
 STAGE2_ASM_OBJ := stage2_start.obj
 STAGE2_MAP     := shell.map
 STAGE2_LNK     := shell.lnk
@@ -41,10 +41,13 @@ $(STAGE1): boot.asm serial.inc
 $(STAGE2_ASM_OBJ): shell.asm
 	$(WASM) -q -fo=$@ $<
 
-$(STAGE2_C_OBJ): shell.c
+kernel.o: kernel.c kernel.h
 	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
 
-$(STAGE2): $(STAGE2_ASM_OBJ) $(STAGE2_C_OBJ) $(STAGE2_LNK)
+console.o: console.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
+$(STAGE2): $(STAGE2_ASM_OBJ) $(STAGE2_C_OBJS) $(STAGE2_LNK)
 	$(WLINK) @$(STAGE2_LNK)
 	@size=$$(wc -c < $@); \
 	if [ "$$size" -gt $$(( $(STAGE2_SECTORS) * 512 )) ]; then \
@@ -99,6 +102,6 @@ abi-proof-clean:
 .PHONY: clean
 clean:
 	rm -f $(IMG_RM) $(IMG_PM) $(IMG_OS) $(STAGE1) $(STAGE2)
-	rm -f $(STAGE2_C_OBJ) $(STAGE2_ASM_OBJ) $(STAGE2_MAP)
+	rm -f $(STAGE2_C_OBJS) $(STAGE2_ASM_OBJ) $(STAGE2_MAP)
 	rm -f abi/abi_proof.obj abi/abi_proof.lst abi/abi_proof.err
 
