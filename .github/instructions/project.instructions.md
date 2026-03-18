@@ -27,3 +27,6 @@ wcc source.c
 
 The compiler writes the object file in the current directory by default. Use
 `wcc386` for 386-targeted C and `wlink` to link the resulting objects.
+
+When working on C sources in this repository, prefer `wcc` or `wcc386` where
+practical instead of switching to another C compiler.
