@@ -7,6 +7,8 @@ IMG_RM   := hello.img          # real-mode hello world
 IMG_PM   := hello_pm.img       # standalone 286 PM echo demo
 IMG_OS   := os.img             # 2-stage: boot.asm + shell.asm
 
+WINE     := arch -x86_64 /opt/homebrew/bin/wine
+
 STAGE1   := boot.bin
 STAGE2   := shell.bin
 
@@ -61,8 +63,17 @@ run-pm: $(IMG_PM)
 run-os: $(IMG_OS)
 	$(call qemu_run,$(IMG_OS))
 
+.PHONY: abi-proof
+abi-proof:
+	$(WINE) cmd /c Z:\\Users\\john\\depot\\os286\\abi\\ow_build.bat
+
+.PHONY: abi-proof-clean
+abi-proof-clean:
+	rm -f abi/abi_proof.obj abi/abi_proof.lst abi/abi_proof.err
+
 # ── Clean ─────────────────────────────────────────────────────
 .PHONY: clean
 clean:
 	rm -f $(IMG_RM) $(IMG_PM) $(IMG_OS) $(STAGE1) $(STAGE2)
+	rm -f abi/abi_proof.obj abi/abi_proof.lst abi/abi_proof.err
 

@@ -112,3 +112,27 @@ qemu-system-i386 \
 ```bash
 make clean
 ```
+
+## 16-bit C ABI proof
+
+The repository also carries a paper ABI definition and a single-file proof built
+with Open Watcom 16-bit C.
+
+- ABI spec: `abi/target-abi.md`
+- Proof source: `abi/abi_proof.c`
+
+To compile the proof object and generate a disassembly listing:
+
+```bash
+make abi-proof
+```
+
+This uses the checked-in Open Watcom toolchain under `.tools/openwatcom` through
+Wine on macOS and produces:
+
+- `abi/abi_proof.obj`
+- `abi/abi_proof.lst`
+- `abi/abi_proof.err`
+
+For the native Open Watcom v2 macOS build notes used in this repository, see
+[open-watcom-v2/BUILD-macos-native.md](open-watcom-v2/BUILD-macos-native.md).

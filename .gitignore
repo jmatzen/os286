@@ -1,3 +1,5 @@
 ._*
 *.img
 *.bin
+.tools
+.cache
