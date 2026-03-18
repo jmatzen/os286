@@ -30,3 +30,7 @@ The compiler writes the object file in the current directory by default. Use
 
 When working on C sources in this repository, prefer `wcc` or `wcc386` where
 practical instead of switching to another C compiler.
+
+# notes
+
+floppy driver: https://github.com/Stichting-MINIX-Research-Foundation/minix/blob/master/minix/drivers/storage/floppy/floppy.c

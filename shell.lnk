@@ -1,0 +1,9 @@
+system rawbin
+name shell.bin
+option map=shell.map
+option start=stage2_image
+output raw offset=0x8000
+order clname CODE offset=0x8000 segment BEGTEXT segment _TEXT
+      clname DATA
+file stage2_start.obj
+file stage2_shell.o

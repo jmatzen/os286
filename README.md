@@ -128,11 +128,29 @@ make abi-proof
 ```
 
 This uses the checked-in Open Watcom toolchain under `.tools/openwatcom` through
-Wine on macOS and produces:
+the native Open Watcom v2 build under `open-watcom-v2/rel` and produces:
 
 - `abi/abi_proof.obj`
 - `abi/abi_proof.lst`
 - `abi/abi_proof.err`
 
 For the native Open Watcom v2 macOS build notes used in this repository, see
-[open-watcom-v2/BUILD-macos-native.md](open-watcom-v2/BUILD-macos-native.md).
+[BUILD-macos-native.md](BUILD-macos-native.md).
+
+## C-backed stage 2 shell
+
+The OS image keeps the boot sector and protected-mode transition in assembly,
+but the interactive stage 2 shell is now implemented in C and linked into a
+flat raw binary with Open Watcom.
+
+- assembly remains responsible for the boot path, IDT setup, and protected-mode ABI handoff
+- C owns the shell REPL, command parsing, and the `help` / `peek` / `poke` / `dump` / `halt` commands
+
+The `make` default target builds that stage 2 shell with:
+
+- `open-watcom-v2/rel/armo64/wasm`
+- `open-watcom-v2/rel/armo64/wcc`
+- `open-watcom-v2/rel/armo64/wlink`
+
+The stage 2 binary is linked at linear address `0x8000` and then padded to the
+sector count that [boot.asm](/Users/john/depot/os286/boot.asm) loads.

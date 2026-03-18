@@ -16,11 +16,11 @@
 ;   0x0D00–0x6EFF  free RAM
 ;   0x6F00         PM stack top   (set by Stage 2)
 ;   0x7C00–0x7DFF  Stage 1        (this file)
-;   0x8000–…       Stage 2        (shell.asm, loaded here)
+;   0x8000–…       Stage 2        (C shell + PM shim, loaded here)
 ;
 ; Disk layout (single flat image, 512-byte sectors)
 ;   Sector 0  (LBA 0)  Stage 1 — boot.asm
-;   Sector 1+ (LBA 1)  Stage 2 — shell.asm  (STAGE2_SECTORS sectors)
+;   Sector 1+ (LBA 1)  Stage 2 — C shell + PM shim  (STAGE2_SECTORS sectors)
 
 BITS 16
 ORG  0x7C00
@@ -31,8 +31,8 @@ SEL_CODE        equ 0x08
 SEL_DATA        equ 0x10
 
 STAGE2_LOAD     equ 0x8000          ; physical load address for Stage 2
-STAGE2_SECTORS  equ 8               ; how many 512-byte sectors to read
-                                    ; (must match shell.asm padded size)
+STAGE2_SECTORS  equ 16              ; how many 512-byte sectors to read
+                                    ; (must match shell.bin padded size)
 
 ; ──────────────────────────────────────────────────────────────
 ; Entry point — real mode
