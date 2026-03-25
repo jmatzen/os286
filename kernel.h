@@ -38,26 +38,19 @@ typedef unsigned long u32;
 /* ── Block device IDs ─────────────────────────────────────── */
 #define DEV_FLOPPY      0
 
-/* ── OS286FS on-disk structures ───────────────────────────── */
-#define FS_MAGIC        0x3638U   /* "86" little-endian */
-#define FS_VERSION      1U
-#define FS_DIR_SECTOR   1U
-#define FS_DATA_START   2U
-#define FS_MAX_FILES    32U
-#define FS_NAME_LEN     8U
-
 struct fs_super {
-    u16 magic;
-    u16 version;
-    u16 file_count;
-    u16 total_sects;
+    u16 bytes_per_sector;
+    u8  sectors_per_cluster;
+    u16 total_sectors;
+    u16 root_entries;
+    u16 sectors_per_fat;
+    u16 data_start_sector;
 };
 
 struct fs_dirent {
-    char name[FS_NAME_LEN];
-    u16  start_sect;
-    u16  size;
-    u8   reserved[4];
+    char name[13];
+    u16  first_cluster;
+    u32  size;
 };
 
 /* ── Kernel core (kernel.c) ───────────────────────────────── */
