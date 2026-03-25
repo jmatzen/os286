@@ -8,3 +8,8 @@ order clname CODE offset=0x8000 segment BEGTEXT segment _TEXT
 file stage2_start.obj
 file kernel.o
 file console.o
+file irq.o
+file floppy.o
+file blkdev.o
+file fs.o
+file exec.o

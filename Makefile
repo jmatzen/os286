@@ -12,14 +12,17 @@ WDIS   := $(OWBIN)/wdis
 IMG_RM   := hello.img          # real-mode hello world
 IMG_PM   := hello_pm.img       # standalone 286 PM echo demo
 IMG_OS   := os.img             # 2-stage: boot.asm + shell.asm
-STAGE2_SECTORS := 16
+IMG_USER := user.img           # OS286FS floppy image
+STAGE2_SECTORS := 48
 
 STAGE1   := boot.bin
 STAGE2   := shell.bin
-STAGE2_C_OBJS  := kernel.o console.o
+STAGE2_C_OBJS  := kernel.o console.o irq.o floppy.o blkdev.o fs.o exec.o
 STAGE2_ASM_OBJ := stage2_start.obj
 STAGE2_MAP     := shell.map
 STAGE2_LNK     := shell.lnk
+
+USER_PROGS     := user/hello.bin user/echo.bin
 
 # ── Default target ────────────────────────────────────────────
 .PHONY: all
@@ -47,6 +50,21 @@ kernel.o: kernel.c kernel.h
 console.o: console.c kernel.h
 	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
 
+irq.o: irq.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
+floppy.o: floppy.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
+blkdev.o: blkdev.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
+fs.o: fs.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
+exec.o: exec.c kernel.h
+	WATCOM=$(WATCOM) EDPATH=$(WATCOM)/eddat INCLUDE=$(WATCOM)/h $(WCC) -q -bt=dos -ms -ecc -s -zl -zu -fo=$@ $<
+
 $(STAGE2): $(STAGE2_ASM_OBJ) $(STAGE2_C_OBJS) $(STAGE2_LNK)
 	$(WLINK) @$(STAGE2_LNK)
 	@size=$$(wc -c < $@); \
@@ -60,6 +78,19 @@ $(STAGE2): $(STAGE2_ASM_OBJ) $(STAGE2_C_OBJS) $(STAGE2_LNK)
 # Concatenate stage1 + stage2 into a single disk image
 $(IMG_OS): $(STAGE1) $(STAGE2)
 	cat $^ > $@
+	@echo "Built $@ ($$(wc -c < $@) bytes)"
+
+# ── User programs (flat binaries) ─────────────────────────────
+user/hello.bin: user/hello.asm
+	$(ASM) -f bin $< -o $@
+	@echo "Built $@"
+
+user/echo.bin: user/echo.asm
+	$(ASM) -f bin $< -o $@
+	@echo "Built $@"
+
+$(IMG_USER): $(USER_PROGS) mkfs.sh
+	./mkfs.sh $@ $(USER_PROGS)
 	@echo "Built $@ ($$(wc -c < $@) bytes)"
 
 # ── QEMU helper macro ─────────────────────────────────────────
@@ -87,6 +118,16 @@ run-pm: $(IMG_PM)
 run-os: $(IMG_OS)
 	$(call qemu_run,$(IMG_OS))
 
+.PHONY: run-full
+run-full: $(IMG_OS) $(IMG_USER)
+	$(QEMU) \
+	    -drive if=none,id=disk0,driver=raw,file.driver=file,file.locking=off,file.filename=$(IMG_OS) \
+	    -device ide-hd,drive=disk0 \
+	    -drive if=floppy,id=floppy0,driver=raw,file.driver=file,file.locking=off,file.filename=$(IMG_USER) \
+	    -serial mon:stdio \
+	    -display none \
+	    -nographic
+
 .PHONY: abi-proof
 abi-proof:
 	rm -f abi/abi_proof.obj abi/abi_proof.lst abi/abi_proof.err
@@ -101,7 +142,8 @@ abi-proof-clean:
 # ── Clean ─────────────────────────────────────────────────────
 .PHONY: clean
 clean:
-	rm -f $(IMG_RM) $(IMG_PM) $(IMG_OS) $(STAGE1) $(STAGE2)
+	rm -f $(IMG_RM) $(IMG_PM) $(IMG_OS) $(IMG_USER) $(STAGE1) $(STAGE2)
 	rm -f $(STAGE2_C_OBJS) $(STAGE2_ASM_OBJ) $(STAGE2_MAP)
+	rm -f $(USER_PROGS)
 	rm -f abi/abi_proof.obj abi/abi_proof.lst abi/abi_proof.err
 

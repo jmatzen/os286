@@ -25,9 +25,12 @@ static const char msg_usage_dump[] = "usage: dump <hex-addr> [<hex-len>] (addr u
 static const char msg_help[] =
     "Commands:\r\n"
     "  help              this list\r\n"
-    "  peek <addr>       read byte at physical address (24-bit, up to 6 hex digits)\r\n"
+    "  peek <addr>       read byte at physical address (24-bit)\r\n"
     "  poke <addr> <val> write byte to physical address (24-bit)\r\n"
-    "  dump <addr> [len] hex+ASCII dump (default 128 bytes; addr 24-bit)\r\n"
+    "  dump <addr> [len] hex+ASCII dump (default 128 bytes)\r\n"
+    "  ls                list files on floppy\r\n"
+    "  run <name>        load and run program from floppy\r\n"
+    "  mount             re-mount floppy filesystem\r\n"
     "  halt              halt the CPU\r\n";
 
 static void __cdecl cmd_help(const char *args);
@@ -35,13 +38,19 @@ static void __cdecl cmd_peek(const char *args);
 static void __cdecl cmd_poke(const char *args);
 static void __cdecl cmd_dump(const char *args);
 static void __cdecl cmd_halt(const char *args);
+static void __cdecl cmd_ls(const char *args);
+static void __cdecl cmd_run(const char *args);
+static void __cdecl cmd_mount(const char *args);
 
 static const struct command commands[] = {
-    { "help", cmd_help },
-    { "peek", cmd_peek },
-    { "poke", cmd_poke },
-    { "dump", cmd_dump },
-    { "halt", cmd_halt },
+    { "help",  cmd_help },
+    { "peek",  cmd_peek },
+    { "poke",  cmd_poke },
+    { "dump",  cmd_dump },
+    { "ls",    cmd_ls },
+    { "run",   cmd_run },
+    { "mount", cmd_mount },
+    { "halt",  cmd_halt },
     { 0, 0 }
 };
 
@@ -54,19 +63,19 @@ static void print_hex_digit(u8 value)
     }
 }
 
-static void print_hex_byte(u8 value)
+void __cdecl print_hex_byte(u8 value)
 {
     print_hex_digit((u8)(value >> 4));
     print_hex_digit((u8)(value & 0x0f));
 }
 
-static void print_hex_word(u16 value)
+void __cdecl print_hex_word(u16 value)
 {
     print_hex_byte((u8)(value >> 8));
     print_hex_byte((u8)(value & 0xff));
 }
 
-static void print_hex24(u32 value)
+void __cdecl print_hex24(u32 value)
 {
     value &= 0x00ffffffUL;
     print_hex_byte((u8)(value >> 16));
@@ -315,6 +324,28 @@ static void __cdecl cmd_dump(const char *args)
         row_offset += row_count;
         count -= row_count;
     }
+}
+
+static void __cdecl cmd_ls(const char *args)
+{
+    (void)args;
+    fs_list();
+}
+
+static void __cdecl cmd_run(const char *args)
+{
+    args = skip_spaces(args);
+    if (*args == 0) {
+        kputs("usage: run <name>\r\n");
+        return;
+    }
+    exec_run(args);
+}
+
+static void __cdecl cmd_mount(const char *args)
+{
+    (void)args;
+    fs_mount();
 }
 
 static void __cdecl cmd_halt(const char *args)

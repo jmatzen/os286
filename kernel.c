@@ -39,8 +39,16 @@ void __cdecl khalt(void)
     stage2_halt();
 }
 
+void __cdecl kinit(void)
+{
+    irq_init();
+    floppy_init();
+    fs_mount();
+}
+
 void __cdecl kmain(void)
 {
     kputs(msg_banner);
+    kinit();
     console_run();
 }

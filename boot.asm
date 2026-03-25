@@ -31,7 +31,7 @@ SEL_CODE        equ 0x08
 SEL_DATA        equ 0x10
 
 STAGE2_LOAD     equ 0x8000          ; physical load address for Stage 2
-STAGE2_SECTORS  equ 16              ; how many 512-byte sectors to read
+STAGE2_SECTORS  equ 48              ; how many 512-byte sectors to read
                                     ; (must match shell.bin padded size)
 
 ; ──────────────────────────────────────────────────────────────
